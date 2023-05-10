@@ -78,7 +78,9 @@ def run(
         vid_stride=1,  # video frame-rate stride
         retina_masks=False,
 ):
-
+    #########################################################################################
+    dict_position = {}
+    #########################################################################################
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
     is_file = Path(source).suffix[1:] in (VID_FORMATS)
@@ -239,6 +241,20 @@ def run(
                         id = output[4]
                         cls = output[5]
                         conf = output[6]
+                        #########################################################################################################
+                        bbox_left = output[0]
+                        bbox_top = output[1]
+                        bbox_w = output[2] - output[0]
+                        bbox_h = output[3] - output[1]
+                        x = bbox_top + bbox_h / 2
+                        y = bbox_left + bbox_w / 2
+                        if id in dict_position:
+                            dict_position[id] = [x, y, dict_position[id][0] - x, dict_position[id][1] - y]
+                        else:
+                            dict_position[id] = [x, y, 0, 0]
+                        if dict_position[id][2] != 0 or dict_position[id][3] != 0:
+                            print(dict_position)
+
 
                         if save_txt:
                             # to MOT format
