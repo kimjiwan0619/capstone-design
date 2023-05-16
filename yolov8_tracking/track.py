@@ -14,6 +14,7 @@ import numpy as np
 from pathlib import Path
 import torch
 import torch.backends.cudnn as cudnn
+import math
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # yolov5 strongsort root directory
@@ -241,20 +242,39 @@ def run(
                         id = output[4]
                         cls = output[5]
                         conf = output[6]
-                        #########################################################################################################
+                        # box의 중심 위치 x, y를 output으로 받음
                         bbox_left = output[0]
                         bbox_top = output[1]
                         bbox_w = output[2] - output[0]
                         bbox_h = output[3] - output[1]
                         x = bbox_top + bbox_h / 2
                         y = bbox_left + bbox_w / 2
+                        
+                        frame_cnt = 5
                         if id in dict_position:
-                            dict_position[id] = [x, y, dict_position[id][0] - x, dict_position[id][1] - y]
+                            if len(dict_position[id]) > frame_cnt:
+                                dict_position[id].pop(0)
+                            dict_position[id].append((x, y))
                         else:
-                            dict_position[id] = [x, y, 0, 0]
-                        if dict_position[id][2] != 0 or dict_position[id][3] != 0:
-                            print(dict_position)
+                            dict_position[id] = [(x, y)]
+                            
+                        # frame 5개를 보고 평균 이동거리를 구한 후 threshold 값 보다 크면 물체의 움직임 판단
+                        
+                        threshold = 0
+                        if len(dict_position[id]) > frame_cnt:
+                            prev_frames = dict_position[id][:]
+                            current_frame = dict_position[id][-1]
+                            total_distance = 0
+                            for prev_frame in prev_frames:
+                                distance = math.sqrt((current_frame[0] - prev_frame[0])**2 + (current_frame[1] - prev_frame[1])**2)
+                                total_distance += distance
+                            average_distance = total_distance / len(prev_frames)
 
+                            if average_distance > threshold:  # 임계값 이상의 평균 거리이면 움직임으로 판단
+                                print(id, average_distance)
+                                #return True
+                            #else:
+                                #return False
 
                         if save_txt:
                             # to MOT format
