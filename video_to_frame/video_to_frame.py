@@ -1,33 +1,40 @@
-import os
-
 import cv2
 
-# 동영상 불러오기
-capture = cv2.VideoCapture(0)
-if not capture.isOpened(): raise Exception("카메라 연결 안됨")
+# 동영상 파일 경로
+video_path = '/data/kimjiwan0619/capstone-design/video_to_frame/video_forder/video_test1.mp4'
 
-# frames = []
-filepath = './images/video_file.avi'
+# 프레임을 저장할 디렉토리 경로
+output_directory = '/data/kimjiwan0619/capstone-design/video_to_frame/frames/'
 
-# 디렉토리 생성
-try:
-	if not os.path.exists(filepath[:-4]):
-		os.makedirs(filepath[:-4])
-except OSError:
-	print('Error: Creating directory. ' +  filepath[:-4])
+def split_video_into_frames(video_path, output_directory, num_frames):
+    # 비디오 캡처 객체 생성
+    cap = cv2.VideoCapture(video_path)
+    
+    # 프레임 카운터 초기화
+    frame_counter = 0
+    
+    # 프레임 단위로 동영상 읽기
+    while cap.isOpened() and frame_counter < num_frames:
+        # 프레임 읽기
+        ret, frame = cap.read()
+        
+        # 비디오의 마지막 프레임에 도달하면 종료
+        if not ret:
+            break
+        
+        # 프레임 저장 경로
+        frame_path = output_directory + 'frame_{:04d}.jpg'.format(frame_counter)
+        print(frame_path)
+        
+        # 프레임 저장
+        cv2.imwrite(frame_path, frame)
+        
+        # 다음 프레임으로 넘어가기
+        frame_counter += 1
+    
+    # 캡처 객체 해제
+    cap.release()
+    cv2.destroyAllWindows()
+    
+split_video_into_frames(video_path, output_directory, num_frames=200)
 
-count = 0
-max = 30
-
-# 동영상 출력
-while True:
-	ret, frame = capture.read()
-	if not ret: break
-
-	# frames.append(frame)
-
-	cv2.imwrite(filepath[:-4] + "/frame%d.jpg" % (count % max), frame)
-	print('Saved frame number :', str(int(capture.get(1))))
-	count += 1
-
-	# print(frame)
