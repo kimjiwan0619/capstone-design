@@ -1,10 +1,13 @@
 import cv2
 
+# 동영상 이름
+video_name = "video_test1.mp4"
+
 # 동영상 파일 경로
-video_path = '/data/kimjiwan0619/capstone-design/video_to_frame/video_forder/video_test1.mp4'
+video_path = './video_forder/' + video_name
 
 # 프레임을 저장할 디렉토리 경로
-output_directory = '/data/kimjiwan0619/capstone-design/video_to_frame/frames/'
+output_directory = './frames/'
 
 def split_video_into_frames(video_path, output_directory, num_frames):
     # 비디오 캡처 객체 생성
