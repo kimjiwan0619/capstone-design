@@ -242,11 +242,6 @@ def run(
                         id = output[4]
                         cls = output[5]
                         conf = output[6]
-                        # box의 중심 위치 x, y를 output으로 받음
-                        bbox_left = output[0]
-                        bbox_top = output[1]
-                        bbox_w = output[2] - output[0]
-                        bbox_h = output[3] - output[1]
 
                         if save_txt:
                             # to MOT format
@@ -271,19 +266,27 @@ def run(
 
                             # frame 5개를 보고 평균 이동거리를 구한 후 threshold 값 보다 크면 물체의 움직임 판단
 
-                            threshold = 0
+                            threshold = 30
                             if len(dict_position[id]) > frame_cnt:
                                 prev_frames = dict_position[id][:]
                                 current_frame = dict_position[id][-1]
                                 total_distance = 0
+                                total_distance2 = 0
+                                total_distance3 = 0
                                 for prev_frame in prev_frames:
                                     distance = math.sqrt((current_frame[0] - prev_frame[0])**2 + (current_frame[1] - prev_frame[1])**2)
                                     total_distance += distance
+                                    distance2 = current_frame[0] - prev_frame[0]
+                                    total_distance2 += distance2
+                                    distance3 = current_frame[1] - prev_frame[1]
+                                    total_distance3 += distance3
+                                    
                                 average_distance = total_distance / len(prev_frames)
 
-                                if average_distance > threshold:  # 임계값 이상의 평균 거리이면 움직임으로 판단                        
+                                if total_distance2 + abs(total_distance3) > threshold and total_distance2 > 0 and total_distance3 < 0:  # 임계값 이상의 평균 거리이면 움직임으로 판단
+                                        
                                     with open(txt_path + '.txt', 'a') as f:
-                                        f.write(('%d ' + '%d ' + '%f ' + '\n') % (frame_idx + 1, id, average_distance))
+                                        f.write(('%d ' + '%d ' + '%f '+ '%f ' + '%f ' + '%f ' + '\n') % (frame_idx + 1, id, average_distance, total_distance2 + abs(total_distance3), total_distance2, total_distance3))
 
                         if save_vid or save_crop or show_vid:  # Add bbox/seg to image
                             c = int(cls)  # integer class
