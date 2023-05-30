@@ -78,9 +78,13 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
         retina_masks=False,
+        #tracking_direction = 'right',
+    
 ):
+    print(tracking_direction)
     #########################################################################################
     dict_position = {}
+    track_direction == "left"
     #########################################################################################
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -249,10 +253,6 @@ def run(
                             bbox_top = output[1]
                             bbox_w = output[2] - output[0]
                             bbox_h = output[3] - output[1]
-                            # Write MOT compliant results to file
-                            """with open(txt_path + '.txt', 'a') as f:
-                                f.write(('%g ' * 10 + '\n') % (frame_idx + 1, id, bbox_left,  # MOT format
-                                                               bbox_top, bbox_w, bbox_h, -1, -1, -1, i))"""
                             x = bbox_top + bbox_h / 2
                             y = bbox_left + bbox_w / 2
 
@@ -271,22 +271,29 @@ def run(
                                 prev_frames = dict_position[id][:]
                                 current_frame = dict_position[id][-1]
                                 total_distance = 0
-                                total_distance2 = 0
-                                total_distance3 = 0
+                                total_x = 0
+                                total_y = 0
                                 for prev_frame in prev_frames:
-                                    distance = math.sqrt((current_frame[0] - prev_frame[0])**2 + (current_frame[1] - prev_frame[1])**2)
-                                    total_distance += distance
-                                    distance2 = current_frame[0] - prev_frame[0]
-                                    total_distance2 += distance2
-                                    distance3 = current_frame[1] - prev_frame[1]
-                                    total_distance3 += distance3
+                                    #distance = math.sqrt((current_frame[0] - prev_frame[0])**2 + (current_frame[1] - prev_frame[1])**2)
+                                    #total_distance += distance
+                                    delta_x = current_frame[0] - prev_frame[0]
+                                    total_x += delta_x
+                                    delta_y = current_frame[1] - prev_frame[1]
+                                    total_x += delta_y
                                     
-                                average_distance = total_distance / len(prev_frames)
-
-                                if total_distance2 + abs(total_distance3) > threshold and total_distance2 > 0 and total_distance3 < 0:  # 임계값 이상의 평균 거리이면 움직임으로 판단
-                                        
-                                    with open(txt_path + '.txt', 'a') as f:
-                                        f.write(('%d ' + '%d ' + '%f '+ '%f ' + '%f ' + '%f ' + '\n') % (frame_idx + 1, id, average_distance, total_distance2 + abs(total_distance3), total_distance2, total_distance3))
+                                #average_distance = total_distance / len(prev_frames)
+                                #left -> 
+                                if track_direction == "left":
+                                    if total_x > 0 and total_y < 0 and total_x + abs(total_y) > threshold:
+                                        with open(txt_path + '.txt', 'a') as f:
+                                            f.write(('%d ' + '%d ' + '%f ' + '%f ' + '%f ' + '\n') % 
+                                                (frame_idx + 1, id, total_x, total_y, total_x + abs(total_y)))
+                                else: #right
+                                    if total_x < 0 and total_y > 0 and total_x + abs(total_y) > threshold:
+                                        with open(txt_path + '.txt', 'a') as f:
+                                            f.write(('%d ' + '%d ' + '%f ' + '%f ' + '%f ' + '\n') % 
+                                                (frame_idx + 1, id, total_x, total_y, total_x + abs(total_y)))
+                                                
 
                         if save_vid or save_crop or show_vid:  # Add bbox/seg to image
                             c = int(cls)  # integer class
@@ -355,7 +362,7 @@ def parse_opt():
     parser.add_argument('--reid-weights', type=Path, default=WEIGHTS / 'osnet_x0_25_msmt17.pt')
     parser.add_argument('--tracking-method', type=str, default='deepocsort', help='deepocsort, botsort, strongsort, ocsort, bytetrack')
     parser.add_argument('--tracking-config', type=Path, default=None)
-    parser.add_argument('--source', type=str, default='0', help='file/dir/URL/glob, 0 for webcam')  
+    parser.add_argument('--source', type=str, default='0', help='file/dir/URL/glob, 0 for webcam')
     parser.add_argument('--imgsz', '--img', '--img-size', nargs='+', type=int, default=[640], help='inference size h,w')
     parser.add_argument('--conf-thres', type=float, default=0.5, help='confidence threshold')
     parser.add_argument('--iou-thres', type=float, default=0.5, help='NMS IoU threshold')
@@ -385,6 +392,7 @@ def parse_opt():
     parser.add_argument('--dnn', action='store_true', help='use OpenCV DNN for ONNX inference')
     parser.add_argument('--vid-stride', type=int, default=1, help='video frame-rate stride')
     parser.add_argument('--retina-masks', action='store_true', help='whether to plot masks in native resolution')
+    #parser.add_argument('--tracking-direction', type=str, default='left')
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     opt.tracking_config = ROOT / 'trackers' / opt.tracking_method / 'configs' / (opt.tracking_method + '.yaml')
