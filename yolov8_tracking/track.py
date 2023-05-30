@@ -78,13 +78,11 @@ def run(
         dnn=False,  # use OpenCV DNN for ONNX inference
         vid_stride=1,  # video frame-rate stride
         retina_masks=False,
-        #tracking_direction = 'right',
+        tracking_direction = 'right',
     
 ):
-    print(tracking_direction)
     #########################################################################################
     dict_position = {}
-    track_direction == "left"
     #########################################################################################
     source = str(source)
     save_img = not nosave and not source.endswith('.txt')  # save inference images
@@ -279,11 +277,12 @@ def run(
                                     delta_x = current_frame[0] - prev_frame[0]
                                     total_x += delta_x
                                     delta_y = current_frame[1] - prev_frame[1]
-                                    total_x += delta_y
-                                    
+                                    total_y += delta_y
+                                 
                                 #average_distance = total_distance / len(prev_frames)
                                 #left -> 
-                                if track_direction == "left":
+                                if tracking_direction == "left":
+                                    print(id, total_x, total_y, total_x + abs(total_y))
                                     if total_x > 0 and total_y < 0 and total_x + abs(total_y) > threshold:
                                         with open(txt_path + '.txt', 'a') as f:
                                             f.write(('%d ' + '%d ' + '%f ' + '%f ' + '%f ' + '\n') % 
@@ -392,7 +391,7 @@ def parse_opt():
     parser.add_argument('--dnn', action='store_true', help='use OpenCV DNN for ONNX inference')
     parser.add_argument('--vid-stride', type=int, default=1, help='video frame-rate stride')
     parser.add_argument('--retina-masks', action='store_true', help='whether to plot masks in native resolution')
-    #parser.add_argument('--tracking-direction', type=str, default='left')
+    parser.add_argument('--tracking-direction', type=str, default='left')
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
     opt.tracking_config = ROOT / 'trackers' / opt.tracking_method / 'configs' / (opt.tracking_method + '.yaml')
