@@ -1,7 +1,7 @@
 import cv2
 
 # 동영상 이름
-video_name = "video_test1.mp4"
+video_name = "video_test1" + ".mp4"
 
 # 동영상 파일 경로
 video_path = './video_forder/' + video_name

@@ -1,10 +1,12 @@
 # 1번째 텍스트 파일 읽기
-file1 = open("/data/kimjiwan0619/capstone-design/yolov8_tracking/runs/track/exp/tracks/frames.txt", "r")
+file1_name = "video_test1" + ".txt"
+file1 = open("../yolov8_tracking/runs/track/exp/tracks/" + file1_name, "r")
 data1 = file1.readlines()
 file1.close()
 
 # 2번째 텍스트 파일 읽기
-file2 = open("/data/kimjiwan0619/capstone-design/yolov8_tracking/runs/track/exp/tracks/video_test1_labeling.txt", "r")
+file2_name = file1_name + "_labeling_average.txt"
+file2 = open("../labeling/result/" + file2_name, "r")
 data2 = file2.readlines()
 file2.close()
 
