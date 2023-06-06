@@ -42,6 +42,27 @@ from yolov8.ultralytics.yolo.utils.plotting import Annotator, colors, save_one_b
 
 from trackers.multi_tracker_zoo import create_tracker
 
+def distance_between_points(x1, y1, x2, y2):
+    return math.sqrt((x2 - x1)**2 + (y2 - y1)**2)
+
+def distance_to_box(close_point_x, close_point_y):
+    box_x1, box_y1 = 540, 0
+    box_x2, box_y2 = 540, 960
+    box_x3, box_y3 = 1080, 960
+    
+    # Case 1: 점이 박스의 외부에 있는 경우
+    corner_distances = [
+        distance_between_points(box_x1, box_y1, close_point_x, close_point_y),
+        distance_between_points(box_x2, box_y2, close_point_x, close_point_y),
+        distance_between_points(box_x3, box_y3, close_point_x, close_point_y),
+    ]
+    min_corner_distance = min(corner_distances)
+    
+    # Case 2: 점이 박스의 내부에 있는 경우
+    if box_x1 < close_point_x < box_x3 and box_y1 < close_point_y < box_y2:
+        return -1
+    
+    return min_corner_distance
 
 @torch.no_grad()
 def run(
@@ -255,43 +276,63 @@ def run(
                             y = bbox_left + bbox_w / 2
 
                             frame_cnt = 5
+                            
                             if id in dict_position:
                                 if len(dict_position[id]) > frame_cnt:
-                                    dict_position[id].pop(0)
+                                    del dict_position[id][0]
                                 dict_position[id].append((x, y))
                             else:
                                 dict_position[id] = [(x, y)]
 
                             # frame 5개를 보고 평균 이동거리를 구한 후 threshold 값 보다 크면 물체의 움직임 판단
-
-                            threshold = 30
+                            
+                            threshold_v = 3 # velocity threshold
+                            threshold_t = 15 # time threshold
                             if len(dict_position[id]) > frame_cnt:
                                 prev_frames = dict_position[id][:]
                                 current_frame = dict_position[id][-1]
-                                total_distance = 0
                                 total_x = 0
                                 total_y = 0
-                                for prev_frame in prev_frames:
-                                    #distance = math.sqrt((current_frame[0] - prev_frame[0])**2 + (current_frame[1] - prev_frame[1])**2)
-                                    #total_distance += distance
-                                    delta_x = current_frame[0] - prev_frame[0]
+
+                                for i in range(frame_cnt):
+                                    prev_frame = prev_frames[i]
+                                    next_frame = prev_frames[i + 1]
+
+                                    delta_x = next_frame[0] - prev_frame[0]
+                                    delta_y = next_frame[1] - prev_frame[1]
+
                                     total_x += delta_x
-                                    delta_y = current_frame[1] - prev_frame[1]
                                     total_y += delta_y
-                                 
-                                #average_distance = total_distance / len(prev_frames)
-                                #left -> 
-                                if tracking_direction == "left":
-                                    print(id, total_x, total_y, total_x + abs(total_y))
-                                    if total_x > 0 and total_y < 0 and total_x + abs(total_y) > threshold:
+
+                                average_x = total_x / len(prev_frames)
+                                average_y = total_y / len(prev_frames)
+                                
+                                close_point_x = bbox_top + bbox_h
+                                close_point_y = bbox_left
+                                distance = distance_to_box(close_point_x, close_point_y)
+                                predicted_time = distance_to_box(close_point_x, close_point_y) / (average_x + abs(average_y))
+                                    
+                                if tracking_direction == "left": #shape[0] = 1080, shape[1] = 1920
+                                    close_point_x = bbox_top + bbox_h
+                                    close_point_y = bbox_left
+                                    distance = distance_to_box(close_point_x, close_point_y)
+                                    predicted_time = distance_to_box(close_point_x, close_point_y) / (total_x + abs(total_y))
+                                    
+                                    if average_x > 0.3 and average_y < 0 and average_x + abs(average_y) > threshold_v and (predicted_time < threshold_t):
+                                        formatted_average_x = "{:.2f}".format(average_x)
+                                        formatted_average_y = "{:.2f}".format(average_y)
+                                        formatted_sum = "{:.2f}".format(average_x + abs(average_y))
+                                        formatted_predicted_time = "{:.2f}".format(predicted_time)
                                         with open(txt_path + '.txt', 'a') as f:
-                                            f.write(('%d ' + '%d ' + '%f ' + '%f ' + '%f ' + '\n') % 
-                                                (frame_idx + 1, id, total_x, total_y, total_x + abs(total_y)))
+                                            f.write(f"{frame_idx + 1} {id} {formatted_average_x} {formatted_average_y} {formatted_sum} {formatted_predicted_time}\n")
                                 else: #right
-                                    if total_x < 0 and total_y > 0 and total_x + abs(total_y) > threshold:
+                                    if average_x < 0 and average_y > 0 and abs(average_x) + average_y > threshold_v and and (predicted_time < threshold_t):
+                                        formatted_average_x = "{:.2f}".format(average_x)
+                                        formatted_average_y = "{:.2f}".format(average_y)
+                                        formatted_sum = "{:.2f}".format(average_x + abs(average_y))
+                                        formatted_predicted_time = "{:.2f}".format(predicted_time)
                                         with open(txt_path + '.txt', 'a') as f:
-                                            f.write(('%d ' + '%d ' + '%f ' + '%f ' + '%f ' + '\n') % 
-                                                (frame_idx + 1, id, total_x, total_y, total_x + abs(total_y)))
+                                            f.write(f"{frame_idx + 1} {id} {formatted_average_x} {formatted_average_y} {formatted_sum} {formatted_predicted_time}\n")
                                                 
 
                         if save_vid or save_crop or show_vid:  # Add bbox/seg to image
@@ -340,7 +381,7 @@ def run(
                     vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (w, h))
                 vid_writer[i].write(im0)
 
-            prev_frames[i] = curr_frames[i]
+            #prev_frames[i] = curr_frames[i]
             
         # Print total time (preprocessing + inference + NMS + tracking)
         LOGGER.info(f"{s}{'' if len(det) else '(no detections), '}{sum([dt.dt for dt in dt if hasattr(dt, 'dt')]) * 1E3:.1f}ms")
@@ -407,3 +448,4 @@ def main(opt):
 if __name__ == "__main__":
     opt = parse_opt()
     main(opt)
+
