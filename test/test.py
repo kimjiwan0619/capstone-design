@@ -5,7 +5,7 @@ data1 = file1.readlines()
 file1.close()
 
 # 2번째 텍스트 파일 읽기
-file2_name = file1_name + "_labeling_average.txt"
+file2_name = file1_name[:-4] + "_labeling_average.txt"
 file2 = open("../labeling/result/" + file2_name, "r")
 data2 = file2.readlines()
 file2.close()

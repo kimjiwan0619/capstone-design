@@ -326,7 +326,7 @@ def run(
                                         with open(txt_path + '.txt', 'a') as f:
                                             f.write(f"{frame_idx + 1} {id} {formatted_average_x} {formatted_average_y} {formatted_sum} {formatted_predicted_time}\n")
                                 else: #right
-                                    if average_x < 0 and average_y > 0 and abs(average_x) + average_y > threshold_v and and (predicted_time < threshold_t):
+                                    if average_x < 0 and average_y > 0 and abs(average_x) + average_y > threshold_v and (predicted_time < threshold_t):
                                         formatted_average_x = "{:.2f}".format(average_x)
                                         formatted_average_y = "{:.2f}".format(average_y)
                                         formatted_sum = "{:.2f}".format(average_x + abs(average_y))
